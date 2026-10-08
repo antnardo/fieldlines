@@ -148,10 +148,12 @@ class Carte:
     ) -> list[Nom]:
         """`nombre` lignes partant du segment [debut, fin].
 
-        `repartition="flux"` : flux égal entre deux lignes voisines (pour des sources de
-        révolution, flux égal dans l'espace) ; `"reguliere"` : départs équidistants.
-        C'est la façon de placer les lignes du champ magnétique, qui n'aboutissent nulle
-        part : un segment qui part d'un fil, ou qui longe un axe.
+        `repartition="flux"` : même flux du champ de la figure entre deux lignes
+        voisines (densité des lignes ∝ intensité du champ) ; `"flux_revolution"` : même
+        flux dans l'espace, pour des sources de révolution ; `"reguliere"` : départs
+        équidistants. C'est la façon de placer les lignes du champ magnétique, qui
+        n'aboutissent nulle part : un segment qui part d'un fil, ou qui traverse une
+        spire. Le segment ne doit pas passer sur une source.
         """
         reglages = Options().remplace(**options)
         departs = departs_le_long(self.distribution, debut, fin, nombre, repartition)

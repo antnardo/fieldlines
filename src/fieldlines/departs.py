@@ -51,7 +51,7 @@ __all__ = [
     "origine_et_phase",
 ]
 
-Repartition: TypeAlias = Literal["flux", "reguliere"]
+Repartition: TypeAlias = Literal["flux", "flux_revolution", "reguliere"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,34 +202,35 @@ def departs_le_long(
     repartition: Repartition = "flux",
     echantillons: int = 4001,
 ) -> list[Point]:
-    """`nombre` départs sur le segment [debut, fin].
+    """`nombre` départs sur le segment [debut, fin], au milieu de `nombre` tranches.
 
-    `reguliere` : au milieu de `nombre` intervalles égaux. `flux` : à incréments égaux
-    du flux qui traverse le segment. Si la distribution a une fonction de flux Ψ
-    (fils de courant, ou révolution autour d'un axe), c'est la variation de Ψ : en
-    révolution, des tubes de flux égal dans l'espace ; sinon, le flux du champ de la
-    figure, ∫|F·n| dl. Le segment ne doit pas passer sur une source.
+    - `flux` : tranches de même flux du champ de la figure, ∫|F·n| dl ; la densité
+      des lignes suit alors l'intensité du champ dans le dessin, comme autour des
+      charges. Pour des fils de courant, c'est exactement la variation de A_z.
+    - `flux_revolution` : tranches de même flux dans l'espace, |ΔΨ| avec Ψ la fonction
+      de Stokes (sources de révolution seulement) : des tubes de flux égaux, plus
+      espacés près de l'axe que dans le dessin plan.
+    - `reguliere` : tranches de même longueur.
+
+    Le segment ne doit pas passer sur une source.
     """
     debut, fin = en_point(debut), en_point(fin)
     t = np.linspace(0.0, 1.0, echantillons)
     x = debut[0] + t * (fin[0] - debut[0])
     y = debut[1] + t * (fin[1] - debut[1])
     if repartition == "reguliere":
-        cibles = (np.arange(nombre) + 0.5) / nombre
-        return [
-            (float(debut[0] + c * (fin[0] - debut[0])), float(debut[1] + c * (fin[1] - debut[1])))
-            for c in cibles
-        ]
-    if repartition != "flux":
-        raise ValueError(f"répartition inconnue : {repartition!r}")
-    if distribution.symetrie() is not None:
-        psi = distribution.flux(x, y)
-        increments = np.abs(np.diff(psi))
-    else:
+        increments = np.ones(echantillons - 1)
+    elif repartition == "flux_revolution":
+        if distribution.symetrie() != "revolution":
+            raise ValueError("flux_revolution : les sources n'ont pas d'axe de révolution commun")
+        increments = np.abs(np.diff(distribution.flux(x, y)))
+    elif repartition == "flux":
         longueur = math.hypot(fin[0] - debut[0], fin[1] - debut[1])
         nx, ny = -(fin[1] - debut[1]) / longueur, (fin[0] - debut[0]) / longueur
         fx, fy = distribution.champ(0.5 * (x[1:] + x[:-1]), 0.5 * (y[1:] + y[:-1]))
         increments = np.abs(fx * nx + fy * ny) * longueur / (echantillons - 1)
+    else:
+        raise ValueError(f"répartition inconnue : {repartition!r}")
     increments = np.where(np.isfinite(increments), increments, 0.0)
     cumul = np.concatenate(([0.0], np.cumsum(increments)))
     if cumul[-1] <= 0:

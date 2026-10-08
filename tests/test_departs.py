@@ -78,11 +78,21 @@ class TestDepartsLeLong:
         rapports = np.array(points)[1:, 0] / np.array(points)[:-1, 0]
         np.testing.assert_allclose(rapports, rapports[0], rtol=1e-3)
 
-    def test_revolution_flux_egal(self):
+    def test_revolution_flux_egal_dans_l_espace(self):
         distribution = Distribution([Spire(1, (0, 0), 1)])
-        points = np.array(departs_le_long(distribution, (0, 0), (0, 0.9), 6))
+        points = np.array(departs_le_long(distribution, (0, 0), (0, 0.9), 6, "flux_revolution"))
         psi = distribution.flux(points[:, 0], points[:, 1])
         np.testing.assert_allclose(np.diff(psi), psi[0] * 2, rtol=1e-3)
+
+    def test_revolution_sans_axe_refusee(self):
+        with pytest.raises(ValueError, match="révolution"):
+            departs_le_long(
+                Distribution([FilCourant(1, (0, 0))]), (1, 0), (2, 0), 3, "flux_revolution"
+            )
+
+    def test_repartition_inconnue(self):
+        with pytest.raises(ValueError):
+            departs_le_long(Distribution([FilCourant(1, (0, 0))]), (1, 0), (2, 0), 3, "uniforme")
 
     def test_sans_symetrie_flux_du_plan_egal(self):
         distribution = Distribution([Charge(1, (0, 1)), Charge(1, (2, 1)), Charge(-1, (1, -1))])
