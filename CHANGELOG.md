@@ -5,6 +5,10 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
 
 ## [Unreleased]
 
+### Ajouté
+
+- Licences : MIT pour le code, CC BY-NC-SA 4.0 pour les exemples.
+
 ## [0.1.0] — non publiée
 
 Première version. Le calcul reprend le module privé `efieldlines` (2017), réécrit et
