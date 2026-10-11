@@ -11,9 +11,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
 
 ## [0.1.0] - 2026-10-10
 
-Première version. Le calcul reprend le module privé `efieldlines` (2017), réécrit et
-étendu au champ magnétique ; l'API change entièrement (voir le README pour la
-correspondance).
+Première version : le champ électrique et le champ magnétique.
 
 ### Ajouté
 
@@ -55,7 +53,7 @@ correspondance).
   tailles des flèches et des sources sont en points.
 - Le dipôle est orienté par l'angle de son moment depuis Ox (`angle`), et non plus
   depuis Oy dans le sens horaire (`alpha`) ; le fil chargé (`FilCharge`) prend sa
-  charge linéique λ (l'ancien `Ligne(q)` valait λ = q/2).
+  charge linéique λ.
 - Le seuil des niveaux symétriques (`niveaux(..., symetrique=True, seuil=...)`) est
   relatif : une fraction de max(|vmin|, |vmax|), 10⁻³ par défaut. Un seuil absolu
   empilait des niveaux sur la surface V = 0 dès que la grille passait près d'une

@@ -33,7 +33,6 @@ Le paquet s'installe depuis GitHub (ci-dessous). Pas de PyPI.
 - [Pièges](#pièges)
 - [Les modules](#les-modules)
 - [Le calcul des lignes](#le-calcul-des-lignes)
-- [Passer d'efieldlines à fieldlines](#passer-defieldlines-à-fieldlines)
 - [Exemples](#exemples)
 - [Tester](#tester)
 - [Antériorité](#antériorité)
@@ -296,36 +295,11 @@ La précision se règle par `Carte(..., reglages=Reglages(...))` ; `verbose=True
 comment chaque ligne s'est arrêtée. Le champ se calcule par lots : un noyau numpy par
 sorte de source, pour tous les points et toutes les sources d'un coup.
 
-## Passer d'efieldlines à fieldlines
-
-| efieldlines | fieldlines |
-| --- | --- |
-| `Figure(charges, xmin, xmax, ymin, ymax)` | `Carte(charges, cadre=(xmin, xmax, ymin, ymax))` |
-| `Ligne(q, pos)` | `FilCharge(q / 2, pos)` |
-| `Dipole(p, pos, alpha=a)` | `Dipole(p, pos, angle=math.pi / 2 - a)` |
-| `set_default_SL_integration_parameters(...)` | inutile : réglages par défaut, ou par ligne |
-| `create_SL_with_automatic_starting_points(R, N)` | `lignes_autour(nombre=N, rayon=R)` |
-| `append_new_SL(x0, y0, arrow_positions=…, enlarge=c)` | `ajoute_ligne((x0, y0), fleches=…, marge=(c - 1) / 2)` (cadre centré en 0) |
-| `tweak_SL(i, ...)` | `ajuste(i, ...)` |
-| `remove_SL([i, j])` | `retire(i, j)`, sans décalage des numéros |
-| `compute_streamlines()`, `compute_arrows(...)` | inutiles : le calcul se fait au tracé |
-| `compute_potential(gridsize)` | inutile, ou `trace_equipotentielles(..., points=gridsize)` |
-| `set_automatic_levels(Nlevels, logscale, symmetric, Vmin, Vmax, deltaV)` | `niveaux(nombre, echelle, symetrique, vmin, vmax, seuil)`, `seuil` relatif |
-| `set_levels(l)`, `add_levels(l)` | une liste de niveaux, ou `niveaux(..., ajoute=l)` |
-| `plot_streamlines(ax)`, `plot_arrows(ax)` | `trace_lignes(ax)`, `trace_fleches(ax)` |
-| `display_streamline_identifier(ax)` | `trace_noms(ax)` |
-| `plot_contours(ax, contraste, cmap, scale)` | `trace_equipotentielles(ax, niveaux, contraste, cmap, norm)` |
-| `plot_contours_label(ax)` | `ax.clabel(trace_equipotentielles(...))` |
-| `plot_charges(ax, chargesize)` | `trace_sources(ax, taille)` |
-
-Les flèches se placent désormais sur la partie visible de la ligne, et leurs tailles
-sont en points : `arrowsize`, qui dépendait du cadre, disparaît.
-
 ## Exemples
 
-Le dossier `examples/` reprend les figures du cours (cartes de champ de charges, de fils
-chargés, quadrupôle, approximation dipolaire, exercice EM-ES15), montre les départs
-selon le flux et une charge dans un champ uniforme, et ajoute le champ magnétique :
+Le dossier `examples/` montre des cartes de champ de charges et de fils chargés, un
+quadrupôle, l'approximation dipolaire, les départs selon le flux, une charge dans un
+champ uniforme, et le champ magnétique :
 fils, spire, bobines de Helmholtz, solénoïde, aimant, dipôle magnétique. Chaque script
 enregistre sa figure en PDF à côté de lui.
 
@@ -351,9 +325,8 @@ l'étiquette est la version du paquet et joint la roue et le sdist à la release
 
 La méthode — suivre pas à pas la direction du champ depuis un point de départ — vient
 du billet de H. Bauke, [Visualizing streamlines](http://numbercrunch.de/blog/2013/05/visualizing-streamlines/)
-(numbercrunch.de, 2013). Le paquet reprend et développe `efieldlines`, module écrit en
-2017 à partir de ce billet pour les figures du cours d'électromagnétisme, et y ajoute
-le champ magnétique.
+(numbercrunch.de, 2013). Le paquet la développe depuis 2017 pour les figures d'un
+cours d'électromagnétisme, et y ajoute le champ magnétique.
 
 `matplotlib.streamplot` trace des lignes interpolées sur une grille, brisées, avec les
 flèches près des départs ; rien n'y atteint exactement une charge et une boucle y est
