@@ -3,7 +3,11 @@
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
 [versionnage sémantique](https://semver.org/lang/fr/).
 
-## [Unreleased]
+## [0.1.1] - 2026-10-11
+
+### Modifié
+
+- Publié sur PyPI : `pip install fieldlines`. Le workflow de release y envoie la roue et le sdist par « trusted publishing », sans jeton ; GitHub garde les artefacts joints à la release.
 
 ## [0.1.0] - 2026-10-10
 
