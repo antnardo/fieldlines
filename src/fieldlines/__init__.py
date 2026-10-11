@@ -28,11 +28,19 @@ from fieldlines.integration import (
 )
 from fieldlines.niveaux import niveaux
 from fieldlines.sources import (
+    K_COULOMB,
+    MU0_SUR_4PI,
+    Aimant,
+    ChampUniforme,
     Charge,
     Dipole,
     DipoleMagnetique,
     FilCharge,
     FilCourant,
+    NappeCourant,
+    Nature,
+    Noyau,
+    PlanCharge,
     Singularite,
     Solenoide,
     Source,
@@ -42,11 +50,15 @@ from fieldlines.sources import (
 __version__ = "0.1.0"
 
 __all__ = [
+    "K_COULOMB",
+    "MU0_SUR_4PI",
+    "Aimant",
     "Arret",
     "Axe",
     "Cadre",
     "Carte",
     "CercleDeFlux",
+    "ChampUniforme",
     "Charge",
     "Dipole",
     "DipoleMagnetique",
@@ -57,8 +69,12 @@ __all__ = [
     "Grille",
     "Integrateur",
     "LigneDeChamp",
+    "NappeCourant",
+    "Nature",
     "Nom",
+    "Noyau",
     "Options",
+    "PlanCharge",
     "Reglages",
     "Singularite",
     "Solenoide",

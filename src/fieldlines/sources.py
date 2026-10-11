@@ -1,9 +1,11 @@
 """Les sources du champ électrique et du champ magnétique, et leurs formules.
 
 Unités réduites : 1/(4π ε0) = 1 et μ0/(4π) = 1. Une charge q crée E = q/r², un fil
-chargé de charge linéique λ crée E = 2λ/r, un fil parcouru par I crée B = 2I/r, une
-spire de rayon a crée B = 2π I a²/(a² + z²)^(3/2) sur son axe. Pour revenir au SI, il
-suffit de multiplier E par 1/(4π ε0) et B par μ0/(4π) : les lignes de champ, elles, ne
+chargé de charge linéique λ crée E = 2λ/r, un plan chargé σ crée E = 2πσ, un fil
+parcouru par I crée B = 2I/r, une nappe de courant j crée B = 2πj, une spire de rayon a
+crée B = 2π I a²/(a² + z²)^(3/2) sur son axe. Pour revenir au SI, il suffit de
+multiplier E et V par `K_COULOMB` = 1/(4π ε0) et B par `MU0_SUR_4PI` = μ0/(4π), les
+charges, courants et longueurs étant en unités SI : les lignes de champ, elles, ne
 dépendent pas des unités.
 
 Sources électriques :
@@ -11,16 +13,24 @@ Sources électriques :
 - `Charge` : charge ponctuelle (champ en 1/r², celui de l'espace) ;
 - `FilCharge` : fil rectiligne infini perpendiculaire à la figure (champ en 1/r,
   problème plan) ;
+- `PlanCharge` : plan infini perpendiculaire à la figure, vu par la tranche (champ
+  uniforme de chaque côté) ;
 - `Dipole` : dipôle ponctuel, dans le plan de la figure.
 
 Sources magnétiques :
 
 - `FilCourant` : fil rectiligne infini perpendiculaire à la figure, courant selon +z
   (vers le lecteur) quand I > 0 ;
+- `NappeCourant` : nappe de courant plane, infinie, perpendiculaire à la figure
+  (champ uniforme de chaque côté, parallèle à la nappe) ;
 - `Spire` : spire circulaire vue par la tranche, la figure étant un plan méridien ;
   champ exact par les intégrales elliptiques complètes ;
 - `Solenoide` : une somme de spires coaxiales ;
+- `Aimant` : cylindre uniformément aimanté, le solénoïde équivalent dessiné avec ses
+  pôles ;
 - `DipoleMagnetique` : dipôle ponctuel, dans le plan de la figure.
+
+Et `ChampUniforme`, électrique ou magnétique, qui s'ajoute aux autres sources.
 
 Le champ se calcule par « lots » : chaque source donne une ou plusieurs lignes de
 paramètres, et un noyau vectorisé traite d'un coup toutes les sources d'une même sorte,
@@ -40,7 +50,7 @@ La fonction de flux Ψ est celle dont les lignes de niveau sont les lignes de ch
 import math
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar, Literal, TypeAlias
 
 import numpy as np
@@ -49,6 +59,10 @@ from scipy.special import ellipe, ellipk
 from fieldlines.geometrie import Axe, Point, en_point
 
 __all__ = [
+    "K_COULOMB",
+    "MU0_SUR_4PI",
+    "Aimant",
+    "ChampUniforme",
     "Charge",
     "Dipole",
     "DipoleMagnetique",
@@ -56,8 +70,10 @@ __all__ = [
     "FilCourant",
     "Genre",
     "Lots",
+    "NappeCourant",
     "Nature",
     "Noyau",
+    "PlanCharge",
     "Singularite",
     "Solenoide",
     "Source",
@@ -67,6 +83,15 @@ __all__ = [
 Nature: TypeAlias = Literal["E", "B"]
 Genre: TypeAlias = Literal["monopole", "dipole", "tourbillon"]
 Noyau: TypeAlias = Callable[[np.ndarray, np.ndarray, np.ndarray], tuple[np.ndarray, np.ndarray]]
+
+# Les constantes qui ramènent au SI, pour les valeurs (pas pour les lignes) : avec q en
+# coulombs, λ en C/m, σ en C/m², I en ampères, j en A/m, M en A/m et les longueurs en
+# mètres, E (V/m) et V (V) valent K_COULOMB fois le champ et le potentiel calculés, B (T)
+# vaut MU0_SUR_4PI fois le champ calculé.
+K_COULOMB = 8.9875517923e9
+"""1/(4π ε0), en N·m²/C² (CODATA 2018)."""
+MU0_SUR_4PI = 1e-7
+"""μ0/(4π), en T·m/A (valeur exacte jusqu'en 2019 ; CODATA 2018 : 1,000 000 000 55 × 10⁻⁷)."""
 
 # Seuil du développement au voisinage de l'axe d'une spire. Au-dessous, la formule
 # exacte de B_ρ/ρ perd ses chiffres (deux termes voisins de π/2 qui se compensent,
@@ -144,6 +169,19 @@ def _noyau_dipoles(p: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[np.ndar
         fx = (3.0 * pr * dx - px * r2) / r5
         fy = (3.0 * pr * dy - py * r2) / r5
         return fx.sum(axis=1), fy.sum(axis=1)
+
+
+def _noyau_uniformes(p: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    # Champs uniformes (fx, fy) : la somme des composantes, partout.
+    return np.full(x.shape, p[:, 0].sum()), np.full(x.shape, p[:, 1].sum())
+
+
+def _noyau_plans(p: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    # Plans (point px, py ; normale nx, ny ; direction du champ vx, vy ; amplitude A) :
+    # F = A sign(d) v, d étant la distance signée au plan. Nul sur le plan même.
+    dx, dy = _ecarts(p, x, y)
+    c = p[:, 6] * np.sign(dx * p[:, 2] + dy * p[:, 3])
+    return (c * p[:, 4]).sum(axis=1), (c * p[:, 5]).sum(axis=1)
 
 
 def _noyau_spires(p: np.ndarray, x: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -259,6 +297,12 @@ class Source(ABC):
         """L'axe de révolution propre de la source, s'il y en a un."""
         return None
 
+    def direction_axe(self) -> float | None:
+        """La direction (radians) qu'un axe de révolution doit avoir pour cette source,
+        quand elle en fixe la direction sans en fixer la position : un champ uniforme,
+        un plan chargé. None si elle n'en impose aucune."""
+        return None
+
     def flux_revolution(self, x: np.ndarray | float, y: np.ndarray | float, axe: Axe) -> np.ndarray:
         """La fonction de Stokes de la source pour une révolution autour de `axe`."""
         raise ValueError(f"{type(self).__name__} : pas de symétrie de révolution")
@@ -335,6 +379,193 @@ class FilCharge(Source):
     def potentiel(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
         with np.errstate(divide="ignore"):
             return -2.0 * self.lineique * np.log(_distance(self.position, x, y))
+
+
+@dataclass(frozen=True, slots=True)
+class _Plan(Source):
+    """Un plan infini perpendiculaire à la figure, vu par la tranche.
+
+    C'est la droite qui passe par `position` avec l'angle `angle` (radians, depuis Ox).
+    Le champ est uniforme de chaque côté, d'amplitude `_amplitude`, dans la direction
+    `_direction` d'un côté et dans la direction opposée de l'autre ; il est nul sur le
+    plan même, et n'a pas de singularité.
+    """
+
+    surfacique: float
+    position: Point
+    angle: float = 0.0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "position", en_point(self.position))
+
+    @property
+    def tangente(self) -> Point:
+        """La direction du plan dans la figure."""
+        return (math.cos(self.angle), math.sin(self.angle))
+
+    @property
+    def normale(self) -> Point:
+        """La normale au plan, la tangente tournée de +90° : le côté où d > 0."""
+        return (-math.sin(self.angle), math.cos(self.angle))
+
+    @abstractmethod
+    def _amplitude(self) -> float:
+        """L'amplitude du champ, de chaque côté."""
+
+    @abstractmethod
+    def _direction(self) -> Point:
+        """La direction du champ du côté de la normale."""
+
+    def lots(self) -> tuple[tuple[Noyau, tuple[float, ...]], ...]:
+        return (
+            (_noyau_plans, (*self.position, *self.normale, *self._direction(), self._amplitude())),
+        )
+
+    def singularites(self) -> tuple[Singularite, ...]:
+        return ()
+
+    def distance_signee(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        """La distance au plan, positive du côté de la normale."""
+        nx, ny = self.normale
+        dx = np.asarray(x, dtype=float) - self.position[0]
+        dy = np.asarray(y, dtype=float) - self.position[1]
+        return dx * nx + dy * ny
+
+    def flux_plan(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        # F = A sign(d) v = (∂Ψ/∂y, −∂Ψ/∂x) avec Ψ = A sign(d) (v_x (y − p_y) − v_y (x − p_x)),
+        # continue à travers une nappe de courant (v = t), pas à travers un plan chargé
+        # (v = n), dont les lignes partent.
+        vx, vy = self._direction()
+        dx = np.asarray(x, dtype=float) - self.position[0]
+        dy = np.asarray(y, dtype=float) - self.position[1]
+        return self._amplitude() * np.sign(self.distance_signee(x, y)) * (vx * dy - vy * dx)
+
+
+@dataclass(frozen=True, slots=True)
+class PlanCharge(_Plan):
+    """Un plan infini de charge surfacique σ, perpendiculaire à la figure.
+
+    E = 2πσ de chaque côté, normal au plan, qui s'en éloigne si σ > 0 ; V = −2πσ |d|.
+    Deux plans de charges opposées font un condensateur plan (champ uniforme entre eux).
+    """
+
+    nature: ClassVar[Nature] = "E"
+
+    def _amplitude(self) -> float:
+        return 2.0 * math.pi * self.surfacique
+
+    def _direction(self) -> Point:
+        return self.normale
+
+    def potentiel(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        return -2.0 * math.pi * self.surfacique * np.abs(self.distance_signee(x, y))
+
+    def direction_axe(self) -> float | None:
+        return self.angle + math.pi / 2
+
+    def flux_revolution(self, x: np.ndarray | float, y: np.ndarray | float, axe: Axe) -> np.ndarray:
+        # Autour d'un axe normal au plan, E_z = 2πσ sign(z − z_plan) : Ψ = E_z ρ²/2.
+        if axe.sens_relatif(self.angle + math.pi / 2) == 0:
+            raise ValueError("plan chargé non perpendiculaire à l'axe de révolution")
+        z, rho = axe.coordonnees(x, y)
+        return math.pi * self.surfacique * np.sign(z - axe.abscisse(self.position)) * rho * rho
+
+
+@dataclass(frozen=True, slots=True)
+class NappeCourant(_Plan):
+    """Une nappe de courant plane, infinie, perpendiculaire à la figure.
+
+    Le courant surfacique j est selon +z (vers le lecteur) quand j > 0 ; B = 2πj de
+    chaque côté, parallèle à la nappe, dans le sens direct autour du courant comme pour
+    un fil : −2πj t du côté de la normale, +2πj t de l'autre, t étant la direction de la
+    nappe. Ψ = A_z = −2πj |d|. Deux nappes de courants opposés font un solénoïde infini
+    (champ uniforme entre elles, nul dehors).
+    """
+
+    nature: ClassVar[Nature] = "B"
+
+    def _amplitude(self) -> float:
+        return -2.0 * math.pi * self.surfacique
+
+    def _direction(self) -> Point:
+        return self.tangente
+
+
+@dataclass(frozen=True, slots=True)
+class ChampUniforme(Source):
+    """Un champ uniforme dans le plan de la figure, électrique ou magnétique.
+
+    `ChampUniforme(E=(Ex, Ey))` ou `ChampUniforme(B=(Bx, By))` : les composantes sont
+    celles du champ dans la figure (un champ perpendiculaire à la figure n'y a pas de
+    lignes). Sans singularité, il n'a pas de lignes propres : on les place avec
+    `lignes_le_long` ou `ajoute_ligne`. Ajouté aux autres sources, il fait le demi-corps
+    de Rankine (fil chargé dans un champ uniforme), la charge dans un champ, le fil de
+    courant dans un champ. V = −E·r ; Ψ = Fx y − Fy x (problème plan), et F_z ρ²/2 en
+    révolution autour d'un axe parallèle au champ.
+    """
+
+    E: Point | None = None
+    B: Point | None = None
+    # La nature dépend de l'argument donné : elle est propre à chaque instance, et non
+    # à la classe comme pour les autres sources.
+    nature: Nature = field(init=False, repr=False, compare=False)  # type: ignore[misc]
+
+    def __post_init__(self) -> None:
+        if (self.E is None) == (self.B is None):
+            raise ValueError("ChampUniforme : donner E=(Ex, Ey) ou B=(Bx, By), pas les deux")
+        nom, donne = ("E", self.E) if self.E is not None else ("B", self.B)
+        try:
+            vecteur = en_point(donne)
+        except ValueError:
+            raise ValueError(
+                f"ChampUniforme({nom}={donne!r}) : {nom} est un vecteur du plan de la figure, "
+                f"{nom}=({nom}x, {nom}y)"
+            ) from None
+        if vecteur == (0.0, 0.0):
+            raise ValueError("ChampUniforme : champ nul")
+        object.__setattr__(self, nom, vecteur)
+        object.__setattr__(self, "nature", nom)
+
+    @property
+    def vecteur(self) -> Point:
+        """Les composantes du champ."""
+        if self.E is not None:
+            return self.E
+        if self.B is not None:
+            return self.B
+        raise ValueError("ChampUniforme sans composantes")  # exclu par __post_init__
+
+    @property
+    def angle(self) -> float:
+        """La direction du champ (radians, depuis Ox)."""
+        fx, fy = self.vecteur
+        return math.atan2(fy, fx)
+
+    def lots(self) -> tuple[tuple[Noyau, tuple[float, ...]], ...]:
+        return ((_noyau_uniformes, self.vecteur),)
+
+    def singularites(self) -> tuple[Singularite, ...]:
+        return ()
+
+    def potentiel(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        if self.nature != "E":
+            return super().potentiel(x, y)
+        fx, fy = self.vecteur
+        return -(fx * np.asarray(x, dtype=float) + fy * np.asarray(y, dtype=float))
+
+    def direction_axe(self) -> float | None:
+        return self.angle
+
+    def flux_plan(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        fx, fy = self.vecteur
+        return fx * np.asarray(y, dtype=float) - fy * np.asarray(x, dtype=float)
+
+    def flux_revolution(self, x: np.ndarray | float, y: np.ndarray | float, axe: Axe) -> np.ndarray:
+        sens = axe.sens_relatif(self.angle)
+        if sens == 0:
+            raise ValueError("champ uniforme non parallèle à l'axe de révolution")
+        _, rho = axe.coordonnees(x, y)
+        return 0.5 * sens * math.hypot(*self.vecteur) * rho * rho
 
 
 @dataclass(frozen=True, slots=True)
@@ -526,3 +757,81 @@ class Solenoide(Source):
             (spire.flux_revolution(x, y, axe) for spire in self.composantes()),
             start=np.zeros(np.broadcast(np.asarray(x), np.asarray(y)).shape),
         )
+
+
+@dataclass(frozen=True, slots=True)
+class Aimant(Source):
+    """Un aimant cylindrique uniformément aimanté selon son axe : le solénoïde équivalent.
+
+    Un cylindre de rayon `rayon` et de hauteur `hauteur`, centré en `centre`, d'axe
+    orienté par `angle` (radians, depuis Ox) du pôle sud vers le pôle nord, porte
+    l'aimantation M = `aimantation` selon cet axe. Son champ B, dedans comme dehors, est
+    celui du courant surfacique M qui tourne sur sa surface latérale : un solénoïde de
+    même forme, de courant total M × hauteur réparti sur `spires` spires. Au centre d'un
+    aimant long, B = μ0 M = 4π M en unités réduites ; avec M en A/m et les longueurs en
+    mètres, B (T) = `MU0_SUR_4PI` × le champ calculé.
+
+    Le dessin montre le cylindre en coupe, ses deux pôles colorés et marqués N et S,
+    sans les spires. Les lignes qui passent à moins du rayon d'arrêt de la surface
+    latérale s'arrêtent sur une spire : partir de l'intérieur de l'aimant, par un
+    segment de son plan médian, et ne pas frôler sa surface.
+    """
+
+    aimantation: float
+    centre: Point
+    rayon: float
+    hauteur: float
+    angle: float = 0.0
+    spires: int = 64
+    nature: ClassVar[Nature] = "B"
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "centre", en_point(self.centre))
+        if self.rayon <= 0 or self.hauteur <= 0:
+            raise ValueError("un aimant a un rayon et une hauteur positifs")
+        if self.spires < 1:
+            raise ValueError("un aimant équivaut à au moins une spire")
+
+    def solenoide(self) -> Solenoide:
+        """Le solénoïde équivalent : courant total M × hauteur, sur `spires` spires."""
+        return Solenoide(
+            self.aimantation * self.hauteur / self.spires,
+            self.centre,
+            self.rayon,
+            self.hauteur,
+            self.spires,
+            self.angle,
+        )
+
+    def poles(self) -> tuple[Point, Point]:
+        """Les centres des faces sud et nord (dans le sens de l'aimantation si M > 0)."""
+        ux, uy = math.cos(self.angle), math.sin(self.angle)
+        cx, cy = self.centre
+        h = self.hauteur / 2
+        sud, nord = (cx - h * ux, cy - h * uy), (cx + h * ux, cy + h * uy)
+        return (sud, nord) if self.aimantation >= 0 else (nord, sud)
+
+    def sommets(self) -> tuple[Point, Point, Point, Point]:
+        """Les quatre coins du rectangle (le cylindre en coupe), dans l'ordre direct."""
+        ux, uy = math.cos(self.angle), math.sin(self.angle)
+        nx, ny = -uy, ux
+        cx, cy = self.centre
+        h, a = self.hauteur / 2, self.rayon
+        return (
+            (cx - h * ux - a * nx, cy - h * uy - a * ny),
+            (cx + h * ux - a * nx, cy + h * uy - a * ny),
+            (cx + h * ux + a * nx, cy + h * uy + a * ny),
+            (cx - h * ux + a * nx, cy - h * uy + a * ny),
+        )
+
+    def lots(self) -> tuple[tuple[Noyau, tuple[float, ...]], ...]:
+        return self.solenoide().lots()
+
+    def singularites(self) -> tuple[Singularite, ...]:
+        return self.solenoide().singularites()
+
+    def axe(self) -> Axe | None:
+        return Axe(self.centre, self.angle)
+
+    def flux_revolution(self, x: np.ndarray | float, y: np.ndarray | float, axe: Axe) -> np.ndarray:
+        return self.solenoide().flux_revolution(x, y, axe)

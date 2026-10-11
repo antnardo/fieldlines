@@ -23,17 +23,20 @@ from matplotlib import transforms
 from matplotlib.axes import Axes
 from matplotlib.contour import QuadContourSet
 from matplotlib.lines import Line2D
-from matplotlib.patches import FancyArrowPatch
+from matplotlib.patches import FancyArrowPatch, Polygon
 
 from fieldlines.champ import Grille
 from fieldlines.geometrie import Cadre, Point
 from fieldlines.integration import LigneDeChamp
 from fieldlines.sources import (
+    Aimant,
     Charge,
     Dipole,
     DipoleMagnetique,
     FilCharge,
     FilCourant,
+    NappeCourant,
+    PlanCharge,
     Solenoide,
     Source,
     Spire,
@@ -151,7 +154,8 @@ def trace_contours(
 
 def trace_sources(ax: Axes, sources: Iterable[Source], taille: float = 10.0) -> None:
     """Dessine chaque source : disque rouge ou bleu pour une charge (aire ∝ |q|),
-    flèche pour un dipôle, ⊙ ou ⊗ pour un courant qui traverse la figure."""
+    flèche pour un dipôle, ⊙ ou ⊗ pour un courant qui traverse la figure, droite pour
+    un plan, rectangle aux pôles N et S pour un aimant ; rien pour un champ uniforme."""
     for source in sources:
         if isinstance(source, (Charge, FilCharge)):
             valeur = source.q if isinstance(source, Charge) else source.lineique
@@ -166,6 +170,13 @@ def trace_sources(ax: Axes, sources: Iterable[Source], taille: float = 10.0) -> 
         elif isinstance(source, Solenoide):
             for spire in source.composantes():
                 _spire(ax, spire, 0.7 * taille, profil=False)
+        elif isinstance(source, Aimant):
+            _aimant(ax, source, taille)
+        elif isinstance(source, PlanCharge):
+            _droite(ax, source.position, source.angle, ROUGE if source.surfacique > 0 else BLEU)
+        elif isinstance(source, NappeCourant):
+            _droite(ax, source.position, source.angle, "k")
+            _courant(ax, source.position, source.surfacique, taille)
 
 
 def _disque(ax: Axes, position: Point, valeur: float, taille: float) -> None:
@@ -227,3 +238,35 @@ def _spire(ax: Axes, spire: Spire, taille: float, profil: bool) -> None:
         ax.plot(*zip(sortant, entrant, strict=True), color="0.5", lw=1, ls="--", zorder=9)
     _courant(ax, sortant, spire.intensite, taille)
     _courant(ax, entrant, -spire.intensite, taille)
+
+
+def _droite(ax: Axes, position: Point, angle: float, couleur: str) -> None:
+    """Un plan vu par la tranche : une droite qui traverse toute la figure."""
+    x, y = position
+    ax.axline(position, (x + math.cos(angle), y + math.sin(angle)), color=couleur, lw=2, zorder=10)
+
+
+def _aimant(ax: Axes, aimant: Aimant, taille: float) -> None:
+    """Le cylindre en coupe : deux moitiés colorées, marquées S et N, sous les lignes.
+
+    Le fond pâle (zorder 1) laisse voir les lignes qui traversent l'aimant, le contour
+    et les lettres passent au-dessus.
+    """
+    s1, s2, s3, s4 = aimant.sommets()  # s1 → s2 : le long de l'axe, côté −n ; s4 → s3 : côté +n
+    milieu_bas = (0.5 * (s1[0] + s2[0]), 0.5 * (s1[1] + s2[1]))
+    milieu_haut = (0.5 * (s4[0] + s3[0]), 0.5 * (s4[1] + s3[1]))
+    sud, nord = aimant.poles()
+    arriere, avant = (s1, s4), (s2, s3)  # les deux faces : vers −u, vers +u
+    sud_vers_moins_u = aimant.aimantation >= 0
+    moitie_arriere = [arriere[0], milieu_bas, milieu_haut, arriere[1]]
+    moitie_avant = [milieu_bas, avant[0], avant[1], milieu_haut]
+    moitie_sud, moitie_nord = (
+        (moitie_arriere, moitie_avant) if sud_vers_moins_u else (moitie_avant, moitie_arriere)
+    )
+    ax.add_patch(Polygon(moitie_sud, closed=True, fc="#c6dbef", ec="none", zorder=1))
+    ax.add_patch(Polygon(moitie_nord, closed=True, fc="#fcbba1", ec="none", zorder=1))
+    ax.add_patch(Polygon([s1, s2, s3, s4], closed=True, fc="none", ec="k", lw=1.2, zorder=10))
+    for lettre, pole in (("S", sud), ("N", nord)):
+        x = 0.5 * (pole[0] + aimant.centre[0])
+        y = 0.5 * (pole[1] + aimant.centre[1])
+        ax.text(x, y, lettre, ha="center", va="center", fontsize=taille, weight="bold", zorder=11)

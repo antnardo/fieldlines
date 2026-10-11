@@ -106,20 +106,27 @@ class Distribution:
         return self._axe
 
     def _cherche_axe(self) -> Axe | None:
+        """Un axe candidat, puis sa vérification par chaque source.
+
+        L'axe propre d'une spire, d'un solénoïde, d'un aimant ou d'un dipôle s'impose.
+        Sinon, il passe par les charges : par les deux premières positions distinctes,
+        ou par la seule position dans la direction qu'impose un champ uniforme ou un plan
+        chargé (à défaut, Ox). Sans charge ni axe propre, pas de révolution.
+        """
         axes = [axe for source in self.sources if (axe := source.axe()) is not None]
         if axes:
             candidat = axes[0]
         else:
-            charges = [s for s in self.sources if isinstance(s, Charge)]
-            if len(charges) != len(self.sources):
+            positions = [s.position for s in self.sources if isinstance(s, Charge)]
+            if not positions:
                 return None
-            # Des charges seules : l'axe passe par les deux premières positions
-            # distinctes ; une seule position, n'importe quel axe : on prend Ox.
-            origine = charges[0].position
-            autres = [c.position for c in charges if c.position != origine]
-            angle = (
-                math.atan2(autres[0][1] - origine[1], autres[0][0] - origine[0]) if autres else 0.0
-            )
+            origine = positions[0]
+            autres = [p for p in positions if p != origine]
+            directions = [d for s in self.sources if (d := s.direction_axe()) is not None]
+            if autres:
+                angle = math.atan2(autres[0][1] - origine[1], autres[0][0] - origine[0])
+            else:
+                angle = directions[0] if directions else 0.0
             candidat = Axe(origine, angle)
         try:
             for source in self.sources:

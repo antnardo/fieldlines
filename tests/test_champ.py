@@ -6,11 +6,14 @@ import pytest
 from fieldlines.champ import Distribution
 from fieldlines.geometrie import Cadre
 from fieldlines.sources import (
+    ChampUniforme,
     Charge,
     Dipole,
     DipoleMagnetique,
     FilCharge,
     FilCourant,
+    NappeCourant,
+    PlanCharge,
     Solenoide,
     Spire,
 )
@@ -72,10 +75,26 @@ def test_grille_sur_une_charge_masquee_et_finie():
         ([Charge(1, (0, 0)), Charge(-1, (1, 1)), Charge(2, (3, 0))], None),
         ([Charge(1, (0, 0)), Dipole(1, (2, 0))], "revolution"),
         ([FilCharge(1, (0, 0))], None),
+        ([ChampUniforme(B=(1, 0))], "plane"),
+        ([ChampUniforme(B=(1, 0)), FilCourant(1, (0, 1))], "plane"),
+        ([NappeCourant(1, (0, 0)), NappeCourant(-1, (0, 1))], "plane"),
+        ([PlanCharge(1, (0, 0)), ChampUniforme(E=(0, 1))], "plane"),
+        ([ChampUniforme(E=(0, 1)), Charge(1, (2, 0))], "revolution"),  # axe vertical
+        ([ChampUniforme(E=(0, 1)), Charge(1, (2, 0)), PlanCharge(1, (0, -1))], "revolution"),
+        ([ChampUniforme(B=(1, 0)), Spire(1, (0, 0), 1)], "revolution"),
+        ([ChampUniforme(B=(0, 1)), Spire(1, (0, 0), 1)], None),
+        ([ChampUniforme(E=(1, 0)), Charge(1, (0, 0)), Charge(1, (0, 2))], None),
     ],
 )
 def test_symetrie(sources, attendu):
     assert Distribution(sources).symetrie() == attendu
+
+
+def test_axe_de_revolution_oriente_par_le_champ_uniforme():
+    distribution = Distribution([ChampUniforme(E=(0, 1)), Charge(1, (2, 0))])
+    axe = distribution.axe_de_revolution()
+    assert axe is not None and axe.origine == (2.0, 0.0)
+    assert axe.sens_relatif(math.pi / 2) != 0
 
 
 def test_flux_sans_symetrie_refuse():

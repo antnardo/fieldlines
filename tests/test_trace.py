@@ -7,7 +7,18 @@ from matplotlib.patches import FancyArrowPatch
 from fieldlines.champ import Distribution
 from fieldlines.geometrie import Cadre
 from fieldlines.integration import Arret, Extremite, Integrateur, LigneDeChamp
-from fieldlines.sources import Charge, Dipole, FilCharge, FilCourant, Solenoide, Spire
+from fieldlines.sources import (
+    Aimant,
+    ChampUniforme,
+    Charge,
+    Dipole,
+    FilCharge,
+    FilCourant,
+    NappeCourant,
+    PlanCharge,
+    Solenoide,
+    Spire,
+)
 from fieldlines.trace import (
     normalisation,
     position_sur_ligne,
@@ -87,8 +98,19 @@ def test_trace_contours_niveaux(ax):
         ([FilCourant(1, (0, 0)), FilCourant(-1, (1, 0))], 4, 0),
         ([Spire(1, (0, 0), 1)], 5, 0),
         ([Solenoide(1, (0, 0), 1, 2, 3)], 12, 0),
+        ([Aimant(1, (0, 0), 0.5, 1)], 0, 2),  # les lettres S et N
+        ([PlanCharge(1, (0, 0), 0.3)], 1, 0),  # une droite
+        ([NappeCourant(1, (0, 0))], 3, 0),  # une droite et le symbole ⊙
+        ([ChampUniforme(B=(1, 0))], 0, 0),  # rien à dessiner
     ],
 )
 def test_trace_sources(ax, sources, lignes, annotations):
     trace_sources(ax, sources)
     assert len(ax.lines) == lignes and len(ax.texts) == annotations
+
+
+def test_trace_aimant_deux_poles_et_un_contour(ax):
+    trace_sources(ax, [Aimant(1, (0, 0), 0.5, 1, angle=math.pi / 2)])
+    assert len(ax.patches) == 3
+    lettres = {texte.get_text(): texte.get_position() for texte in ax.texts}
+    assert lettres["S"][1] < 0 < lettres["N"][1]

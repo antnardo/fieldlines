@@ -5,12 +5,18 @@ import pytest
 
 from fieldlines.geometrie import Axe
 from fieldlines.sources import (
+    K_COULOMB,
+    MU0_SUR_4PI,
+    Aimant,
+    ChampUniforme,
     Charge,
     Dipole,
     DipoleMagnetique,
     FilCharge,
     FilCourant,
     Lots,
+    NappeCourant,
+    PlanCharge,
     Solenoide,
     Source,
     Spire,
@@ -59,7 +65,14 @@ class TestChampsElectriques:
         np.testing.assert_allclose(paire.champ(x, y), dipole.champ(x, y), rtol=1e-5)
 
     @pytest.mark.parametrize(
-        "source", [Charge(1.3, (0.2, -0.4)), FilCharge(-0.7, (1, 1)), Dipole(2, (0, 1), 0.7)]
+        "source",
+        [
+            Charge(1.3, (0.2, -0.4)),
+            FilCharge(-0.7, (1, 1)),
+            Dipole(2, (0, 1), 0.7),
+            PlanCharge(0.4, (0.3, 0.2), angle=0.6),
+            ChampUniforme(E=(0.8, -0.3)),
+        ],
     )
     def test_champ_est_moins_le_gradient_du_potentiel(self, source, gradient):
         x, y = 1.7, -0.9
@@ -188,3 +201,173 @@ def test_lots_somme_des_sources():
 def test_lots_champ_point_egal_au_champ():
     lots = Lots([Charge(1, (0, 0)), Dipole(1, (1, 1), 0.3)])
     assert lots.champ_point(0.5, -0.2) == pytest.approx(lots.champ(0.5, -0.2))
+
+
+class TestConstantesSI:
+    def test_k_coulomb_est_un_sur_quatre_pi_epsilon_zero(self):
+        assert pytest.approx(1 / (4 * math.pi * 8.8541878128e-12), rel=1e-9) == K_COULOMB
+
+    def test_mu_zero_sur_quatre_pi(self):
+        assert pytest.approx(1.25663706212e-6 / (4 * math.pi), rel=1e-8) == MU0_SUR_4PI
+
+    def test_coulomb_en_si(self):
+        # Deux charges de 1 µC à 1 m : E = 8 988 V/m.
+        ex, _ = Charge(1e-6, (0, 0)).champ(1.0, 0.0)
+        assert K_COULOMB * ex == pytest.approx(8988, rel=1e-3)
+
+    def test_fil_en_si(self):
+        # 10 A à 1 cm : B = μ0 I/(2π r) = 0,2 mT.
+        _, by = FilCourant(10, (0, 0)).champ(0.01, 0.0)
+        assert MU0_SUR_4PI * by == pytest.approx(2e-4, rel=1e-9)
+
+
+class TestChampUniforme:
+    def test_constant_partout(self):
+        x, y = np.array([0.0, 3.0, -7.0]), np.array([1.0, -2.0, 5.0])
+        ex, ey = ChampUniforme(E=(1.5, -0.5)).champ(x, y)
+        np.testing.assert_allclose(ex, 1.5)
+        np.testing.assert_allclose(ey, -0.5)
+
+    def test_nature_selon_l_argument(self):
+        assert ChampUniforme(E=(1, 0)).nature == "E"
+        assert ChampUniforme(B=[0, 2]).nature == "B"
+        assert ChampUniforme(B=[0, 2]).vecteur == (0.0, 2.0)
+
+    @pytest.mark.parametrize("arguments", [{}, {"E": (1, 0), "B": (0, 1)}, {"E": (0, 0)}])
+    def test_arguments_refuses(self, arguments):
+        with pytest.raises(ValueError, match="ChampUniforme"):
+            ChampUniforme(**arguments)
+
+    def test_scalaire_refuse(self):
+        with pytest.raises(ValueError, match=r"B=\(Bx, By\)"):
+            ChampUniforme(B=1.0)  # type: ignore[arg-type]
+
+    def test_sans_singularite(self):
+        assert ChampUniforme(E=(1, 0)).singularites() == ()
+
+    def test_magnetique_sans_potentiel(self):
+        with pytest.raises(TypeError):
+            ChampUniforme(B=(1, 0)).potentiel(0.0, 0.0)
+
+    def test_derive_de_sa_fonction_de_flux_plane(self, gradient):
+        source = ChampUniforme(B=(0.7, -1.1))
+        dax, day = gradient(source.flux_plan, 0.4, 0.9)
+        assert source.champ(0.4, 0.9) == pytest.approx((day, -dax), rel=1e-6)
+
+    def test_flux_de_revolution_autour_d_un_axe_parallele(self, gradient):
+        source = ChampUniforme(B=(-2.0, 0.0))
+        axe = Axe((0, 0), 0.0)
+        x, y = 0.3, 0.8
+        dpz, dprho = gradient(lambda a, b: source.flux_revolution(a, b, axe), x, y)
+        assert source.champ(x, y) == pytest.approx((dprho / y, -dpz / y), rel=1e-6)
+
+    def test_flux_de_revolution_axe_oblique_refuse(self):
+        with pytest.raises(ValueError, match="parallèle"):
+            ChampUniforme(B=(1, 0)).flux_revolution(0.0, 0.0, Axe((0, 0), 0.3))
+
+
+def champ_de_fils(fabrique, surfacique, x, y, demi_longueur=1000.0, pas=0.05):
+    """Le champ d'une nappe plane le long de Ox, comme somme de fils serrés."""
+    abscisses = np.arange(-demi_longueur, demi_longueur, pas) + pas / 2
+    return Lots([fabrique(surfacique * pas, (a, 0.0)) for a in abscisses]).champ(x, y)
+
+
+class TestPlans:
+    def test_plan_charge_comme_une_nappe_de_fils(self):
+        plan = PlanCharge(0.3, (0, 0))
+        np.testing.assert_allclose(
+            plan.champ(0.0, 0.5), champ_de_fils(FilCharge, 0.3, 0.0, 0.5), rtol=1e-3, atol=1e-6
+        )
+        assert plan.champ(0.0, 0.5) == pytest.approx((0.0, 2 * math.pi * 0.3))
+        assert plan.champ(0.0, -0.5) == pytest.approx((0.0, -2 * math.pi * 0.3))
+
+    def test_nappe_de_courant_comme_une_nappe_de_fils(self):
+        nappe = NappeCourant(0.3, (0, 0))
+        np.testing.assert_allclose(
+            nappe.champ(0.0, 0.5), champ_de_fils(FilCourant, 0.3, 0.0, 0.5), rtol=1e-3, atol=1e-6
+        )
+        assert nappe.champ(0.0, 0.5) == pytest.approx((-2 * math.pi * 0.3, 0.0))
+        assert nappe.champ(0.0, -0.5) == pytest.approx((2 * math.pi * 0.3, 0.0))
+
+    def test_plan_oblique(self):
+        plan = PlanCharge(1.0, (1, 1), angle=math.pi / 4)
+        # Du côté de la normale (−1, 1)/√2, le champ est 2π n.
+        attendu = 2 * math.pi / math.sqrt(2)
+        assert plan.champ(0.0, 2.0) == pytest.approx((-attendu, attendu))
+
+    def test_nappe_derive_de_a_z(self, gradient):
+        nappe = NappeCourant(-0.8, (0.2, -0.1), angle=0.5)
+        dax, day = gradient(nappe.flux_plan, 1.0, 0.7)
+        assert nappe.champ(1.0, 0.7) == pytest.approx((day, -dax), rel=1e-6)
+
+    def test_plan_charge_flux_de_revolution(self, gradient):
+        plan = PlanCharge(0.5, (0.5, 0), angle=math.pi / 2)  # le plan x = 0,5
+        axe = Axe((0, 0), 0.0)
+        x, y = 1.3, 0.8
+        dpz, dprho = gradient(lambda a, b: plan.flux_revolution(a, b, axe), x, y)
+        assert plan.champ(x, y) == pytest.approx((dprho / y, -dpz / y), rel=1e-6)
+        with pytest.raises(ValueError, match="perpendiculaire"):
+            plan.flux_revolution(0.0, 0.0, Axe((0, 0), 0.3))
+
+    def test_sans_singularite(self):
+        assert PlanCharge(1, (0, 0)).singularites() == NappeCourant(1, (0, 0)).singularites() == ()
+
+    def test_condensateur_plan(self):
+        # Deux plans de charges opposées : E = 4πσ entre eux, nul dehors.
+        armatures = Lots([PlanCharge(1, (0, 1)), PlanCharge(-1, (0, -1))])
+        assert armatures.champ(0.0, 0.0) == pytest.approx((0.0, -4 * math.pi))
+        assert armatures.champ(0.0, 2.0) == pytest.approx((0.0, 0.0))
+
+
+class TestAimant:
+    def test_est_le_solenoide_equivalent(self):
+        aimant = Aimant(2.0, (1, 2), 0.5, 3.0, angle=0.7, spires=9)
+        solenoide = Solenoide(2.0 * 3.0 / 9, (1, 2), 0.5, 3.0, 9, angle=0.7)
+        x, y = np.array([0.4, 2.0]), np.array([0.1, 3.5])
+        np.testing.assert_allclose(aimant.champ(x, y), solenoide.champ(x, y))
+        assert aimant.singularites() == solenoide.singularites()
+
+    def test_champ_au_centre_d_un_aimant_long(self):
+        # B = μ0 M (L/2)/sqrt((L/2)² + R²), soit 4π M en unités réduites.
+        aimant = Aimant(1.0, (0, 0), 0.1, 20.0, spires=2000)
+        bx, by = aimant.champ(0.0, 0.0)
+        assert bx == pytest.approx(MU0 * 10 / math.sqrt(100 + 0.01), rel=1e-4)
+        assert by == pytest.approx(0.0, abs=1e-9)
+
+    def test_neodyme_en_si(self):
+        # μ0 M = 1,3 T (néodyme) : au centre d'un aimant long, B ≈ 1,3 T.
+        aimantation = 1.3 / (4 * math.pi * MU0_SUR_4PI)
+        aimant = Aimant(aimantation, (0, 0), 0.01, 1.0, spires=2000)
+        bx, _ = aimant.champ(0.0, 0.0)
+        assert MU0_SUR_4PI * bx == pytest.approx(1.3 * 0.5 / math.hypot(0.5, 0.01), rel=1e-3)
+
+    def test_loin_ressemble_a_un_dipole(self):
+        aimant = Aimant(1.5, (0, 0), 0.2, 1.0, angle=0.9)
+        dipole = DipoleMagnetique(1.5 * math.pi * 0.2**2 * 1.0, (0, 0), angle=0.9)
+        x, y = np.array([10.0, -7.0]), np.array([3.0, 8.0])
+        ecart = np.hypot(*np.subtract(aimant.champ(x, y), dipole.champ(x, y)))
+        np.testing.assert_array_less(ecart, 1e-2 * np.hypot(*dipole.champ(x, y)))
+
+    def test_poles_dans_le_sens_de_l_aimantation(self):
+        sud, nord = Aimant(1, (0, 0), 0.5, 2.0, angle=math.pi / 2).poles()
+        assert sud == pytest.approx((0, -1)) and nord == pytest.approx((0, 1))
+        sud, nord = Aimant(-1, (0, 0), 0.5, 2.0, angle=math.pi / 2).poles()
+        assert sud == pytest.approx((0, 1)) and nord == pytest.approx((0, -1))
+
+    def test_sommets_du_rectangle(self):
+        sommets = Aimant(1, (1, 0), 0.5, 2.0).sommets()
+        np.testing.assert_allclose(sommets, [(0, -0.5), (2, -0.5), (2, 0.5), (0, 0.5)])
+
+    def test_flux_de_revolution(self):
+        aimant = Aimant(1.0, (0, 0), 0.3, 1.0, spires=8)
+        axe = Axe((0, 0), 0.0)
+        assert aimant.flux_revolution(0.2, 0.7, axe) == pytest.approx(
+            aimant.solenoide().flux_revolution(0.2, 0.7, axe)
+        )
+
+    @pytest.mark.parametrize(
+        "arguments", [(1, (0, 0), 0, 1), (1, (0, 0), 1, -1), (1, (0, 0), 1, 1, 0, 0)]
+    )
+    def test_dimensions_refusees(self, arguments):
+        with pytest.raises(ValueError):
+            Aimant(*arguments)
