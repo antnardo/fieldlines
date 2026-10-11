@@ -126,3 +126,19 @@ class TestOptions:
         options = Options(style=style)
         style["color"] = "b"
         assert options.style == {"color": "r"}
+
+    def test_fleches_un_seul_nombre(self):
+        assert Options(fleches=0.3).fleches == (0.3,)
+        assert Options().remplace(fleches=np.float64(0.2)).fleches == (0.2,)
+
+    @pytest.mark.parametrize("valeur", ["0.3", object()])
+    def test_fleches_ni_nombre_ni_liste_refusees(self, valeur):
+        with pytest.raises(TypeError, match="fleches"):
+            Options(fleches=valeur)
+
+    def test_remplace_style_donne_directement(self):
+        # `ajuste(nom, color="r")` : le message dit de passer par style={...}.
+        with pytest.raises(TypeError, match=r'style=\{"color": …\}'):
+            Options().remplace(color="r")
+        with pytest.raises(TypeError, match="color, linewidth"):
+            Options().remplace(linewidth=2, color="r")

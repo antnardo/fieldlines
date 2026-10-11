@@ -11,7 +11,7 @@ from typing import TypeAlias
 
 import numpy as np
 
-__all__ = ["Axe", "Cadre", "Point", "en_point"]
+__all__ = ["Axe", "Cadre", "Point", "distance_au_segment", "en_point"]
 
 Point: TypeAlias = tuple[float, float]
 
@@ -24,6 +24,20 @@ def en_point(valeur: object) -> Point:
     """
     x, y = np.asarray(valeur, dtype=float).reshape(2)
     return (float(x), float(y))
+
+
+def distance_au_segment(
+    debut: Point, fin: Point, x: np.ndarray | float, y: np.ndarray | float
+) -> np.ndarray:
+    """La distance de points au segment [debut, fin] (vectorisé)."""
+    dx, dy = fin[0] - debut[0], fin[1] - debut[1]
+    px = np.asarray(x, dtype=float) - debut[0]
+    py = np.asarray(y, dtype=float) - debut[1]
+    longueur2 = dx * dx + dy * dy
+    if longueur2 <= 0:
+        return np.hypot(px, py)
+    t = np.clip((px * dx + py * dy) / longueur2, 0.0, 1.0)
+    return np.hypot(px - t * dx, py - t * dy)
 
 
 @dataclass(frozen=True, slots=True)

@@ -5,7 +5,7 @@ import pytest
 
 from fieldlines.carte import Carte
 from fieldlines.integration import Arret
-from fieldlines.sources import Charge, Dipole, FilCourant, Spire
+from fieldlines.sources import Aimant, ChampUniforme, Charge, Dipole, FilCourant, Spire
 
 PAIRE = [Charge(1, (-1, 0)), Charge(-1, (1, 0))]
 CADRE = (-3, 3, -3, 3)
@@ -146,3 +146,78 @@ class TestTrace:
         carte.verbose = True
         carte.ligne(0)
         assert "ligne 0 :" in capsys.readouterr().out
+
+
+class TestGardeFous:
+    def test_segment_trop_pres_d_une_source_refuse(self):
+        carte = Carte([FilCourant(1, (0, 0))], CADRE)
+        with pytest.raises(ValueError, match="rayon d'arrêt"):
+            carte.lignes_le_long((0.001, 0), (2.5, 0), 4)
+        assert len(carte) == 0
+
+    def test_segment_qui_traverse_une_source_refuse(self):
+        carte = Carte(PAIRE, CADRE)
+        with pytest.raises(ValueError, match="n° 0"):
+            carte.lignes_le_long((-2, 0), (0, 0), 4)
+
+    def test_fleches_un_seul_nombre(self, carte):
+        carte.ajuste(0, fleches=0.3)
+        assert carte.options(0).fleches == (0.3,)
+        nom = carte.ajoute_ligne((0, 1), fleches=0.9)
+        assert carte.options(nom).fleches == (0.9,)
+
+    def test_style_donne_directement(self, carte):
+        with pytest.raises(TypeError, match="style="):
+            carte.ajuste(0, color="r")
+        with pytest.raises(TypeError, match="style="):
+            carte.lignes_autour(nombre=4, linewidth=2)
+
+
+class TestSymetriques:
+    def test_depart_sans_calculer_la_ligne(self, carte):
+        assert carte.depart(3) == carte.ligne(3).depart
+        carte.ajuste(3, depart=(0.5, 0.5))
+        assert carte.depart(3) == (0.5, 0.5)
+
+    def test_champ_potentiel_flux(self, carte):
+        assert carte.champ(0.0, 1.0) == pytest.approx(carte.distribution.champ(0.0, 1.0))
+        assert carte.potentiel(0.0, 1.0) == pytest.approx(carte.distribution.potentiel(0.0, 1.0))
+        assert carte.flux(0.5, 1.0) == pytest.approx(carte.distribution.flux(0.5, 1.0))
+
+    def test_niveaux_de_flux_pour_une_carte_magnetique(self):
+        carte = Carte([Spire(1, (0, 0), 1)], CADRE)
+        niveaux = carte.niveaux(5, points=32)
+        assert len(niveaux) == 5 and np.all(np.isfinite(niveaux))
+        with pytest.raises(TypeError):
+            carte.niveaux(5, points=32, grandeur="potentiel")
+
+    def test_enregistre(self, carte, tmp_path):
+        chemin = carte.enregistre(tmp_path / "carte.png", figsize=(3, 3))
+        assert chemin.exists() and chemin.stat().st_size > 0
+
+
+class TestNouvellesSources:
+    def test_champ_uniforme_seul_lignes_le_long(self):
+        carte = Carte([ChampUniforme(E=(1, 0))], CADRE)
+        with pytest.raises(ValueError, match="lignes_le_long"):
+            carte.lignes_autour()
+        noms = carte.lignes_le_long((0, -2), (0, 2), 4)
+        for nom in noms:
+            ligne = carte.ligne(nom)
+            assert ligne.amont.arret is Arret.SORTIE and ligne.aval.arret is Arret.SORTIE
+            assert np.ptp(ligne.points[:, 1]) < 1e-9
+
+    def test_charge_dans_un_champ_uniforme(self):
+        # Les lignes de la charge s'échappent vers +x, sauf la séparatrice ; le point de
+        # champ nul est en (−1, 0).
+        carte = Carte([ChampUniforme(E=(1, 0)), Charge(1, (0, 0))], CADRE)
+        noms = carte.lignes_autour(nombre=8, rayon=0.1)
+        arrets = {carte.ligne(nom).aval.arret for nom in noms}
+        assert Arret.SORTIE in arrets
+        assert carte.champ(-1.0, 0.0) == pytest.approx((0.0, 0.0), abs=1e-12)
+
+    def test_aimant_lignes_fermees(self):
+        carte = Carte([Aimant(1, (0, 0), 0.3, 1.0, angle=math.pi / 2)], CADRE)
+        # Un nombre pair : aucune ligne sur l'axe, qui ne se referme qu'à l'infini.
+        noms = carte.lignes_le_long((-0.25, 0), (0.25, 0), 4, repartition="flux_revolution")
+        assert all(carte.ligne(nom).fermee for nom in noms)

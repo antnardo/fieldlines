@@ -18,8 +18,10 @@ tracé : changer les flèches ou le style ne coûte rien.
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from numbers import Integral
+from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
 from matplotlib.colors import Colormap, Normalize
@@ -153,8 +155,11 @@ class Carte:
         flux dans l'espace, pour des sources de révolution ; `"reguliere"` : départs
         équidistants. C'est la façon de placer les lignes du champ magnétique, qui
         n'aboutissent nulle part : un segment qui part d'un fil, ou qui traverse une
-        spire. Le segment ne doit pas passer sur une source.
+        spire. Un segment qui passe à moins du rayon d'arrêt d'une source est refusé
+        (ValueError) : les lignes s'y arrêteraient aussitôt.
         """
+        debut, fin = en_point(debut), en_point(fin)
+        self._integrateur.verifie_segment(debut, fin)
         reglages = Options().remplace(**options)
         departs = departs_le_long(self.distribution, debut, fin, nombre, repartition)
         return [self._ajoute(depart, reglages) for depart in departs]
@@ -201,14 +206,34 @@ class Carte:
         return entree.ligne
 
     def options(self, nom: Nom) -> Options:
-        """Les réglages de la ligne nommée."""
+        """Les réglages de la ligne nommée (ce que `ajuste` change)."""
         return self._entree(nom).options
+
+    def depart(self, nom: Nom) -> Point:
+        """Le point de départ de la ligne nommée, sans la calculer."""
+        return self._entree(nom).depart
 
     def lignes(self) -> dict[Nom, LigneDeChamp]:
         """Toutes les lignes, calculées au besoin."""
         return {nom: self.ligne(nom) for nom in self._entrees}
 
-    # ------------------------------------------------- potentiel, flux et niveaux
+    # ---------------------------------------------- champ, potentiel, flux, niveaux
+
+    def champ(self, x: np.ndarray | float, y: np.ndarray | float) -> tuple[np.ndarray, np.ndarray]:
+        """Les composantes du champ total (vectorisé, unités réduites)."""
+        return self.distribution.champ(x, y)
+
+    def potentiel(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        """Le potentiel électrostatique (champ électrique seulement, unités réduites)."""
+        return self.distribution.potentiel(x, y)
+
+    def flux(self, x: np.ndarray | float, y: np.ndarray | float) -> np.ndarray:
+        """La fonction de flux Ψ, dont les lignes de niveau sont les lignes de champ.
+
+        Elle n'existe que pour des fils de courant seuls, ou des sources de même axe de
+        révolution (voir `fieldlines.champ.Distribution.flux`).
+        """
+        return self.distribution.flux(x, y)
 
     def grille(
         self, grandeur: Literal["potentiel", "flux"] = "potentiel", points: int = 512
@@ -229,14 +254,19 @@ class Carte:
         seuil: float = 1e-3,
         ajoute: Iterable[float] = (),
         points: int = 512,
+        grandeur: Literal["potentiel", "flux"] | None = None,
     ) -> np.ndarray:
-        """Des niveaux d'équipotentielles (voir `fieldlines.niveaux`).
+        """Des niveaux d'équipotentielles, ou de lignes de flux (voir `fieldlines.niveaux`).
 
-        Sans `vmin` ni `vmax`, les bornes sont les extrêmes finis du potentiel sur la
-        grille du cadre.
+        Sans `vmin` ni `vmax`, les bornes sont les extrêmes finis, sur la grille du
+        cadre, du potentiel (carte électrique) ou de la fonction de flux (carte
+        magnétique) ; `grandeur` impose l'une ou l'autre. `seuil` est une fraction du
+        maximum de la valeur absolue.
         """
+        if grandeur is None:
+            grandeur = "potentiel" if self.distribution.nature == "E" else "flux"
         if vmin is None or vmax is None:
-            grille = self.grille("potentiel", points)
+            grille = self.grille(grandeur, points)
             vmin = grille.minimum if vmin is None else vmin
             vmax = grille.maximum if vmax is None else vmax
         return niveaux(vmin, vmax, nombre, echelle, symetrique, seuil, ajoute)
@@ -333,6 +363,25 @@ class Carte:
         self.trace_lignes(ax, **style)
         self.trace_fleches(ax, taille=taille_fleches)
         self.trace_sources(ax, taille=taille_sources)
+
+    def enregistre(
+        self,
+        chemin: str | Path,
+        figsize: tuple[float, float] | None = None,
+        taille_fleches: float = 8.0,
+        taille_sources: float = 10.0,
+        **style: Any,
+    ) -> Path:
+        """`trace` dans une figure neuve, enregistrée sous `chemin` (PDF, PNG… selon
+        l'extension) puis fermée ; rend le chemin. Pour les scripts qui ne veulent que
+        la figure."""
+        fig, ax = plt.subplots(figsize=figsize)
+        self.trace(ax, taille_fleches=taille_fleches, taille_sources=taille_sources, **style)
+        fig.tight_layout()
+        chemin = Path(chemin)
+        fig.savefig(chemin)
+        plt.close(fig)
+        return chemin
 
     # ------------------------------------------------------------------- en interne
 

@@ -24,16 +24,17 @@ départ, elle, pourrait passer sous un seuil entre deux pas sans qu'on le voie.
 """
 
 import math
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import dataclass, field, fields, replace
 from enum import Enum
+from numbers import Real
 from typing import Any, Literal, TypeAlias
 
 import numpy as np
 from scipy.integrate import solve_ivp
 
 from fieldlines.champ import Distribution
-from fieldlines.geometrie import Cadre, Point, en_point
+from fieldlines.geometrie import Cadre, Point, distance_au_segment, en_point
 
 __all__ = ["Arret", "Extremite", "Integrateur", "LigneDeChamp", "Options", "Reglages", "Sens"]
 
@@ -70,7 +71,8 @@ class Options:
     """Les réglages propres à une ligne.
 
     - `fleches` : positions des flèches, en fractions de la longueur visible (dans le
-      cadre) de la ligne, comptées de l'amont vers l'aval ;
+      cadre) de la ligne, comptées de l'amont vers l'aval ; une liste, ou un seul
+      nombre ;
     - `marge` : de combien on agrandit le cadre (en fraction de ses côtés) avant
       d'arrêter le calcul d'une ligne qui sort ;
     - `sens` : `deux` (de part et d'autre du départ), `aval` ou `amont` seulement ;
@@ -86,18 +88,28 @@ class Options:
     style: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "fleches", tuple(float(f) for f in self.fleches))
+        object.__setattr__(self, "fleches", _fractions(self.fleches))
         object.__setattr__(self, "style", dict(self.style))
         if self.sens not in ("deux", "aval", "amont"):
             raise ValueError(f"sens inconnu : {self.sens!r}")
-        if any(not 0.0 <= f <= 1.0 for f in self.fleches):
-            raise ValueError("les flèches se placent à des fractions entre 0 et 1")
 
     def remplace(self, **changements: Any) -> "Options":
-        """Une copie modifiée ; un nom de réglage inconnu lève TypeError."""
+        """Une copie modifiée ; un nom de réglage inconnu lève TypeError.
+
+        Un argument de tracé (`color`, `linewidth`…) donné directement est reconnu, et
+        le message dit de le passer dans `style`.
+        """
         connus = {f.name for f in fields(self)}
         inconnus = set(changements) - connus
         if inconnus:
+            from matplotlib.lines import Line2D  # import différé : seulement pour le message
+
+            styles = sorted(nom for nom in inconnus if hasattr(Line2D, f"set_{nom}"))
+            if styles:
+                exemple = ", ".join(f'"{nom}": …' for nom in styles)
+                raise TypeError(
+                    f"{', '.join(styles)} : un style de tracé se donne dans style={{{exemple}}}"
+                )
             raise TypeError(f"réglages de ligne inconnus : {', '.join(sorted(inconnus))}")
         return replace(self, **changements)
 
@@ -105,6 +117,20 @@ class Options:
     def integration(self) -> tuple[float, Sens, float | None]:
         """Ce qui change le tracé de la ligne elle-même (et oblige à la recalculer)."""
         return (self.marge, self.sens, self.longueur_max)
+
+
+def _fractions(valeur: object) -> tuple[float, ...]:
+    """Les positions des flèches : un nombre ou des nombres, tous entre 0 et 1."""
+    if isinstance(valeur, Real):
+        valeur = (valeur,)
+    if isinstance(valeur, str | bytes) or not isinstance(valeur, Iterable):
+        raise TypeError(
+            f"fleches : un nombre ou une liste de fractions entre 0 et 1, pas {valeur!r}"
+        )
+    fractions = tuple(float(f) for f in valeur)
+    if any(not 0.0 <= f <= 1.0 for f in fractions):
+        raise ValueError("les flèches se placent à des fractions entre 0 et 1")
+    return fractions
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,6 +228,25 @@ class Integrateur:
         """Le rayon d'arrêt pour une ligne partant de `point` : jamais plus de la moitié
         de sa distance à la singularité la plus proche, pour ne pas partir dedans."""
         return min(self._rayon_arret, 0.5 * self._distance_singularites(point))
+
+    def verifie_segment(self, debut: Point, fin: Point) -> None:
+        """ValueError si le segment passe à moins du rayon d'arrêt d'une singularité.
+
+        Les lignes qui en partiraient s'arrêteraient sur elle aussitôt : le segment des
+        départs doit s'écarter des sources (ou `Reglages.arret` être réduit).
+        """
+        if not len(self._positions):
+            return
+        distances = distance_au_segment(debut, fin, self._positions[:, 0], self._positions[:, 1])
+        i = int(np.argmin(distances))
+        if distances[i] < self._rayon_arret:
+            position = self._distribution.singularites[i].position
+            raise ValueError(
+                f"le segment de {debut} à {fin} passe à {distances[i]:.3g} de la source "
+                f"n° {i} en {position}, sous le rayon d'arrêt {self._rayon_arret:.3g} : les "
+                "lignes qui en partiraient s'arrêteraient aussitôt ; écarter le segment des "
+                "sources, ou réduire Reglages.arret"
+            )
 
     def integre(self, depart: Point, options: Options | None = None) -> LigneDeChamp:
         """La ligne de champ qui passe par `depart`."""
