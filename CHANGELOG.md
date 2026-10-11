@@ -3,12 +3,18 @@
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
 [versionnage sémantique](https://semver.org/lang/fr/).
 
-## [Non publié]
+## [0.1.2] - 2026-10-11
 
 ### Ajouté
 
 - La galerie des exemples `examples/README.md`, l'image de chaque exemple dans
   `examples/images/`.
+
+### Modifié
+
+- Le README présente le projet sans références internes ni codes d'exercices ; les
+  docstrings des exemples aussi. La page PyPI, qui reprend le README de la roue, est
+  donc à jour à partir de cette version.
 
 ## [0.1.1] - 2026-10-11
 

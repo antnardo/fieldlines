@@ -1,5 +1,4 @@
-"""Quatre charges alternées aux sommets d'un carré, toutes les lignes automatiques.
-"""
+"""Quatre charges alternées aux sommets d'un carré, toutes les lignes automatiques."""
 
 from pathlib import Path
 

@@ -1,5 +1,9 @@
 # fieldlines
 
+[![PyPI](https://img.shields.io/pypi/v/fieldlines.svg)](https://pypi.org/project/fieldlines/)
+[![CI](https://github.com/antnardo/fieldlines/actions/workflows/ci.yml/badge.svg)](https://github.com/antnardo/fieldlines/actions/workflows/ci.yml)
+[![Licence MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](https://github.com/antnardo/fieldlines/blob/main/LICENSE)
+
 Lignes de champ électrique et magnétique, et équipotentielles, pour des figures de
 cours : des charges, des fils et des plans chargés, des dipôles, des fils et des nappes
 de courant, des spires, des solénoïdes, des aimants, un champ uniforme. On les pose

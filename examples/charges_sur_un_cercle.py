@@ -1,5 +1,4 @@
-"""N charges égales régulièrement réparties sur un cercle, pour N = 3, 5, 6, 7, 8, 15.
-"""
+"""N charges égales régulièrement réparties sur un cercle, pour N = 3, 5, 6, 7, 8, 15."""
 
 import math
 from pathlib import Path
