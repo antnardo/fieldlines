@@ -297,11 +297,10 @@ sorte de source, pour tous les points et toutes les sources d'un coup.
 
 ## Exemples
 
-Le dossier `examples/` montre des cartes de champ de charges et de fils chargés, un
-quadrupôle, l'approximation dipolaire, les départs selon le flux, une charge dans un
-champ uniforme, et le champ magnétique :
-fils, spire, bobines de Helmholtz, solénoïde, aimant, dipôle magnétique. Chaque script
-enregistre sa figure en PDF à côté de lui.
+![Quadrupôle : lignes de champ et équipotentielles, à gauche retouchées à la main, à droite placées selon le flux](https://raw.githubusercontent.com/antnardo/fieldlines/main/examples/images/quadrupole.png)
+
+La galerie [`examples/README.md`](examples/README.md) décrit chaque exemple avec sa
+figure. Chaque script enregistre sa figure en PDF à côté de lui.
 
 ## Tester
 
