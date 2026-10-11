@@ -1,6 +1,4 @@
 """Quatre charges alternées aux sommets d'un carré, toutes les lignes automatiques.
-
-D'après Medias/Python/EM/Figures cours/E_cartechamp_example2.py.
 """
 
 from pathlib import Path

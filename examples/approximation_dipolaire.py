@@ -2,8 +2,6 @@
 
 Mêmes niveaux et mêmes couleurs pour les deux cartes : le `norm` du premier tracé sert
 au second. Loin des charges, les équipotentielles se confondent.
-
-D'après Medias/Python/EM/Figures cours/E_cartechamp_example5.py.
 """
 
 import math

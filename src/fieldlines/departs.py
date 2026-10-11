@@ -69,8 +69,7 @@ def departs_autour(
 
     Monopôle : angles angle + 2πk/nombre. Dipôle : réguliers en sin θ, θ compté depuis
     l'axe du dipôle, une moitié des départs du côté où le champ sort, l'autre moitié
-    de l'autre côté (sans le départ en double de l'ancien module, qui prenait les deux
-    bouts de linspace(0, 2π)).
+    de l'autre côté, sans départ en double aux deux bouts de l'intervalle d'angles.
     """
     cx, cy = singularite.position
     x = np.linspace(0.0, 2.0 * math.pi, nombre, endpoint=False)

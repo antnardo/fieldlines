@@ -19,7 +19,7 @@ carte.trace_equipotentielles(ax, carte.niveaux(20, echelle="log", symetrique=Tru
 plt.show()
 ```
 
-Le paquet s'installe depuis GitHub (ci-dessous). Pas de PyPI.
+Le paquet s'installe depuis PyPI (`pip install fieldlines`) ou depuis GitHub (ci-dessous).
 
 ## Sommaire
 
@@ -186,7 +186,7 @@ plan ou une nappe est la droite qui passe par `position` avec l'angle `angle`.
 Une source personnalisée hérite de `Source` et donne son noyau vectorisé (`lots`) et
 ses singularités (`singularites`), plus `potentiel`, `flux_plan` ou `flux_revolution`
 si elle les a : `fieldlines.sources` en est la documentation, `ChampUniforme` le plus
-court modèle, et l'exercice EM-ES26 du cours (un potentiel imposé) un autre.
+court modèle ; un potentiel imposé sur une frontière en est un autre.
 
 ## Unités réduites et valeurs SI
 
@@ -228,19 +228,19 @@ coupe une fois, sans passer à moins du rayon d'arrêt d'une source.
 | Source | Segment de départ | Exemple |
 | --- | --- | --- |
 | un fil | du fil vers le bord, `(r0, 0)` → `(R, 0)` ; à flux égal, les rayons des cercles sont en progression géométrique | `fils_courants.py` |
-| plusieurs fils | un segment par famille de lignes (autour d'un fil, autour de deux…), depuis le fil ou depuis un point de champ nul | `fils_courants.py`, exercices EM-MS03 et EM-MS04 |
+| plusieurs fils | un segment par famille de lignes (autour d'un fil, autour de deux…), depuis le fil ou depuis un point de champ nul | `fils_courants.py` |
 | une spire | son diamètre dans la figure, `(0, −0.9 R)` → `(0, 0.9 R)` ; `"flux"` suit l'intensité du champ dans le dessin, `"flux_revolution"` fait des tubes de flux égaux dans l'espace | `spire.py` |
 | un solénoïde | son plan médian, à l'intérieur, `(0, −0.95 R)` → `(0, 0.95 R)` | `solenoide.py` |
 | des bobines de Helmholtz | le plan médian entre les deux spires, `"flux_revolution"` | `bobines_de_helmholtz.py` |
 | un aimant | son plan médian, à l'intérieur ; les lignes le traversent du pôle S au pôle N et se referment dehors | `aimant.py` |
 | un dipôle magnétique | `lignes_autour` convient (les lignes sortent du dipôle et y rentrent), ou un segment sur l'équateur | `dipole_magnetique.py` |
-| un champ uniforme et un fil | un segment que toutes les lignes coupent, l'axe vertical par exemple | exercice EM-MS03 |
+| un champ uniforme et un fil | un segment que toutes les lignes coupent, l'axe vertical par exemple | `champ_uniforme.py` (pour une charge) |
 
 Un nombre pair de départs sur le diamètre d'une spire évite la ligne de l'axe, qui ne
 se referme qu'à l'infini. Un aimant est le solénoïde équivalent : `Aimant(M, centre,
 rayon, hauteur, angle)` vaut `Solenoide(M * hauteur / spires, centre, rayon, hauteur,
 spires, angle)`, et se dessine en coupe avec ses pôles ; pour un aimant réel, M en A/m
-et B (T) = `MU0_SUR_4PI` × le champ calculé (exercice OO-EM65).
+et B (T) = `MU0_SUR_4PI` × le champ calculé.
 
 **La fonction de flux.** Pour des fils de courant (problème plan), Ψ = A_z ; pour des
 sources qui ont toutes le même axe de révolution (charges sur l'axe, dipôles, spires,

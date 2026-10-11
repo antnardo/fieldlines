@@ -3,8 +3,6 @@
 `lignes_autour` trace chaque ligne d'une charge à l'autre deux fois, une fois depuis
 chaque bout : on retire les doublons par leur numéro (`trace_noms` les montre). La
 figure de droite obtient le même résultat sans retouche, avec `lignes_selon_flux`.
-
-D'après Medias/Python/EM/Figures cours/E_cartechamp_example3.py.
 """
 
 from pathlib import Path

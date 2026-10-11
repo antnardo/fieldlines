@@ -2,8 +2,6 @@
 
 Niveaux logarithmiques entre deux bornes choisies, plus trois niveaux qui passent par
 les points d'arrêt ; les lignes s'arrêtent d'elles-mêmes au point d'arrêt central.
-
-D'après Exercices/Exos/EM/EM-ES15/carte-champ.py.
 """
 
 import math

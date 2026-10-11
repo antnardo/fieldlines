@@ -4,8 +4,6 @@ Lignes de départ automatiques ou à la main, retouche ou retrait d'une ligne pa
 numéro, niveaux logarithmiques symétriques des équipotentielles, valeurs du potentiel.
 Le numéro de chaque ligne est écrit sur la figure : c'est avec lui qu'on choisit les
 lignes à retoucher ou à retirer.
-
-D'après Medias/Python/Python Classe/EM/E_cartechamp_example1.py.
 """
 
 import math

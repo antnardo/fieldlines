@@ -1,7 +1,7 @@
 """Deux charges différentes, +2 et −1 : la moitié des lignes de +2 finit sur −1.
 
-D'après Medias/Python/EM/Figures cours/E_cartechamp_example4.py, où l'on retire à la
-main les lignes de −1, déjà tracées depuis +2 ; `lignes_selon_flux` le fait seul.
+Avec `lignes_autour`, il faudrait retirer à la main les lignes de −1, déjà tracées
+depuis +2 ; `lignes_selon_flux` le fait seul.
 """
 
 from pathlib import Path

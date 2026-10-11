@@ -2,9 +2,6 @@
 
 Un fil de charge linéique λ crée E = 2λ/r : avec λ = ±1/2, V = ∓ln r. Lignes et
 équipotentielles en traits fins, niveaux linéaires plus trois niveaux ajoutés.
-
-D'après Annales/Base_Corrections/2005/p05xp1/…/p05xp1e-carte-champ-lignes.py et
-Medias/Python/EM/Cartes/carte-champ-lignes.py.
 """
 
 import math

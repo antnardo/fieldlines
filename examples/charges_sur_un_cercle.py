@@ -1,6 +1,4 @@
 """N charges égales régulièrement réparties sur un cercle, pour N = 3, 5, 6, 7, 8, 15.
-
-D'après Exercices/Exos/EM/EM-ES15/carte-champ-N.py.
 """
 
 import math
