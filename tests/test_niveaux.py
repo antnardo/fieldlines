@@ -11,13 +11,21 @@ def test_lineaire():
 
 
 def test_lineaire_symetrique_sans_zero():
-    resultat = niveaux(-2, 4, 3, symetrique=True, seuil=1)
+    # seuil relatif : 0,25 × max(|vmin|, |vmax|) = 1.
+    resultat = niveaux(-2, 4, 3, symetrique=True, seuil=0.25)
     np.testing.assert_allclose(resultat, [-4, -2.5, -1, 1, 2.5, 4])
 
 
 def test_log_symetrique():
-    resultat = niveaux(-50, 100, 3, echelle="log", symetrique=True, seuil=1)
+    resultat = niveaux(-50, 100, 3, echelle="log", symetrique=True, seuil=0.01)
     np.testing.assert_allclose(resultat, [-100, -10, -1, 1, 10, 100])
+
+
+def test_seuil_relatif_par_defaut_trois_decades():
+    # Le seuil suit le potentiel extrême : une grille qui passe près d'une charge ne
+    # fait plus descendre les niveaux jusqu'à 10⁻³ (empilés sur la surface V = 0).
+    resultat = niveaux(-5000, 5000, 4, echelle="log", symetrique=True)
+    np.testing.assert_allclose(resultat[4:], [5, 50, 500, 5000])
 
 
 def test_log_positif():
@@ -48,6 +56,7 @@ def test_bornes_inversees_acceptees():
     np.testing.assert_allclose(niveaux(3, -1, 5), [-1, 0, 1, 2, 3])
 
 
-def test_seuil_trop_grand_refuse():
-    with pytest.raises(ValueError):
-        niveaux(-1, 1, 5, symetrique=True, seuil=2)
+@pytest.mark.parametrize("seuil", [0, 1, 2, -0.1])
+def test_seuil_hors_de_0_1_refuse(seuil):
+    with pytest.raises(ValueError, match="fraction"):
+        niveaux(-1, 1, 5, symetrique=True, seuil=seuil)
