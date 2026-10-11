@@ -7,7 +7,7 @@ flux, champ uniforme, puis le champ magnétique.
 
 ## Électrostatique
 
-### Deux charges différentes — `deux_charges.py`
+### Deux charges différentes — [`deux_charges.py`](deux_charges.py)
 
 Deux charges +2 et −1 : le flux de la charge négative vaut la moitié de celui de la
 positive, donc une ligne sur deux parties de +2 aboutit sur −1 et les autres filent à
@@ -18,7 +18,7 @@ viennent de `niveaux(20, echelle="log", symetrique=True)` et de
 
 ![Lignes de champ de deux charges +2 et −1, avec les équipotentielles en rouge autour de la positive et en bleu autour de la négative](images/deux_charges.png)
 
-### Deux charges positives et deux négatives — `quatre_charges.py`
+### Deux charges positives et deux négatives — [`quatre_charges.py`](quatre_charges.py)
 
 Deux charges +1 en bas et deux charges −1 en haut, aux sommets d'un carré : chaque
 ligne va d'une charge positive à l'une des négatives, et le potentiel s'annule sur
@@ -29,7 +29,7 @@ de chaque charge, puis `trace_lignes`, `trace_fleches`, `trace_equipotentielles`
 
 ![Lignes de champ de quatre charges, deux positives en bas et deux négatives en haut, avec les équipotentielles](images/quatre_charges.png)
 
-### Quatre charges égales et points de champ nul — `quatre_charges_egales.py`
+### Quatre charges égales et points de champ nul — [`quatre_charges_egales.py`](quatre_charges_egales.py)
 
 Quatre charges égales aux sommets d'un carré : le champ s'annule au centre et en quatre
 points des axes, marqués en bleu, dont la position sur Ox est résolue par
@@ -41,7 +41,7 @@ croise elle-même.
 
 ![Quatre charges égales aux sommets d'un carré : lignes de champ grises, équipotentielles et points de champ nul en bleu](images/quatre_charges_egales.png)
 
-### N charges sur un cercle — `charges_sur_un_cercle.py`
+### N charges sur un cercle — [`charges_sur_un_cercle.py`](charges_sur_un_cercle.py)
 
 N charges égales régulièrement réparties sur un cercle, pour N = 3, 5, 6, 7, 8 et 15.
 Plus N grandit, plus la distribution ressemble à un anneau uniformément chargé : les
@@ -53,7 +53,7 @@ s'annule au centre, où les lignes s'arrêtent). Une `Carte` par panneau, avec
 
 ![Six cartes de champ de N charges égales sur un cercle, pour N égal à 3, 5, 6, 7, 8 et 15](images/charges_sur_un_cercle.png)
 
-### Six fils chargés — `fils_charges.py`
+### Six fils chargés — [`fils_charges.py`](fils_charges.py)
 
 Six fils rectilignes infinis, perpendiculaires à la figure, de charges linéiques
 alternées ±1/2 aux sommets d'un hexagone : un problème plan, où le champ d'un fil
@@ -64,7 +64,7 @@ décroît en 1/r et le potentiel est logarithmique. `FilCharge` remplace `Charge
 
 ![Lignes de champ et équipotentielles de six fils chargés alternativement, aux sommets d'un hexagone](images/fils_charges.png)
 
-### Deux charges et un dipôle, toutes les retouches — `charges_et_dipole.py`
+### Deux charges et un dipôle, toutes les retouches — [`charges_et_dipole.py`](charges_et_dipole.py)
 
 Une paire de charges ±1 et, à côté, un dipôle ponctuel de moment vertical, dans un
 cadre large qui montre à la fois les lignes qui joignent les charges et celles qui
@@ -77,7 +77,7 @@ numéros sur la figure, et `ax.clabel` les valeurs du potentiel sur les
 
 ![Lignes de champ numérotées de deux charges opposées et d'un dipôle, dans un cadre large](images/charges_et_dipole.png)
 
-### Quadrupôle — `quadrupole.py`
+### Quadrupôle — [`quadrupole.py`](quadrupole.py)
 
 Quatre charges ±1 alternées aux sommets d'un carré, un quadrupôle : les lignes vont de
 chaque charge positive à ses deux voisines négatives, et le potentiel s'annule sur les
@@ -88,7 +88,7 @@ droite, `lignes_selon_flux` obtient le même résultat sans retouche.
 
 ![Quadrupôle : lignes de champ et équipotentielles, à gauche retouchées à la main, à droite placées selon le flux](images/quadrupole.png)
 
-### Approximation dipolaire — `approximation_dipolaire.py`
+### Approximation dipolaire — [`approximation_dipolaire.py`](approximation_dipolaire.py)
 
 Deux charges ±1 distantes de 1 et, superposé, le dipôle ponctuel de même moment : loin
 des charges, les équipotentielles des deux cartes (traits pleins pour la paire, tirets
@@ -101,7 +101,7 @@ les mêmes valeurs aient les mêmes couleurs.
 
 ## Départs selon le flux
 
-### Placer les lignes selon le flux — `selon_le_flux.py`
+### Placer les lignes selon le flux — [`selon_le_flux.py`](selon_le_flux.py)
 
 La densité des lignes doit refléter l'intensité du champ. `lignes_autour` (à gauche)
 fait partir autant de lignes de chaque charge quelle que soit sa valeur, et trace deux
@@ -116,7 +116,7 @@ l'intensité du champ. Les titres comptent les lignes de chaque carte avec
 
 ## Champ uniforme
 
-### Une charge dans un champ uniforme — `champ_uniforme.py`
+### Une charge dans un champ uniforme — [`champ_uniforme.py`](champ_uniforme.py)
 
 `ChampUniforme(E=(1, 0))` s'ajoute à une charge comme une source ordinaire. Les lignes
 issues de la charge (`lignes_autour`) s'échappent vers les x positifs ; celles du champ
@@ -130,7 +130,7 @@ point de champ nul en (−1, 0), où q/r² = E₀, marqué sur la figure ; les
 
 ## Magnétostatique
 
-### Fils de courant — `fils_courants.py`
+### Fils de courant — [`fils_courants.py`](fils_courants.py)
 
 Fils rectilignes infinis perpendiculaires à la figure. À gauche, deux fils parcourus en
 sens opposés (⊙ et ⊗) : les lignes sont des cercles qui entourent chaque fil, de plus
@@ -142,7 +142,7 @@ figure, et chacune s'arrête quand elle se referme.
 
 ![Lignes du champ magnétique de deux fils de sens opposés, puis de deux nappes de six fils](images/fils_courants.png)
 
-### Spire circulaire — `spire.py`
+### Spire circulaire — [`spire.py`](spire.py)
 
 Une spire vue par la tranche (plan méridien), qui perce la figure en ⊙ et ⊗. À gauche,
 les lignes intégrées pas à pas, parties du diamètre de la spire avec `lignes_le_long`
@@ -154,7 +154,7 @@ espacés près de l'axe.
 
 ![Spire vue par la tranche : lignes de champ intégrées à gauche, lignes de niveau de la fonction de flux à droite](images/spire.png)
 
-### Bobines de Helmholtz — `bobines_de_helmholtz.py`
+### Bobines de Helmholtz — [`bobines_de_helmholtz.py`](bobines_de_helmholtz.py)
 
 Deux spires coaxiales de même rayon R, distantes de R : le champ est presque uniforme
 entre elles, d'où les lignes parallèles au centre. Les deux sources ont le même axe,
@@ -164,7 +164,7 @@ lignes, flèches et spires.
 
 ![Bobines de Helmholtz : lignes de champ presque parallèles entre les deux spires](images/bobines_de_helmholtz.png)
 
-### Solénoïde — `solenoide.py`
+### Solénoïde — [`solenoide.py`](solenoide.py)
 
 Un solénoïde de 20 spires, de longueur 4 et de rayon 1, vu en coupe : à l'intérieur le
 champ est presque uniforme, les lignes sortent par les extrémités et se referment à
@@ -174,7 +174,7 @@ figure.
 
 ![Solénoïde en coupe : lignes de champ parallèles à l'intérieur, refermées à l'extérieur](images/solenoide.png)
 
-### Aimant droit — `aimant.py`
+### Aimant droit — [`aimant.py`](aimant.py)
 
 Un cylindre uniformément aimanté équivaut à un solénoïde de même forme : les lignes le
 traversent du pôle sud au pôle nord, sortent par la face nord et se referment dehors.
@@ -187,7 +187,7 @@ dipôle.
 
 ![Aimant droit : lignes de champ à flux égal, et comparaison de loin avec un dipôle magnétique en tirets rouges](images/aimant.png)
 
-### Dipôle magnétique et petite spire — `dipole_magnetique.py`
+### Dipôle magnétique et petite spire — [`dipole_magnetique.py`](dipole_magnetique.py)
 
 Un dipôle magnétique ponctuel (en noir) et une petite spire de même moment (en bleu),
 vus dans un plan méridien. Loin des sources, les lignes se superposent ; près d'elles,
