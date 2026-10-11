@@ -10,3 +10,7 @@ build/
 *.egg-info/
 examples/*.pdf
 examples/*.png
+
+# Réglages locaux de VS Code
+*.code-workspace
+.vscode/
