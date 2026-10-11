@@ -5,11 +5,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et le
 
 ## [Unreleased]
 
-### Ajouté
-
-- Licences : MIT pour le code, CC BY-NC-SA 4.0 pour les exemples.
-
-## [0.1.0] — non publiée
+## [0.1.0] - 2026-10-10
 
 Première version. Le calcul reprend le module privé `efieldlines` (2017), réécrit et
 étendu au champ magnétique ; l'API change entièrement (voir le README pour la
@@ -17,18 +13,34 @@ correspondance).
 
 ### Ajouté
 
-- Sources magnétiques : fil rectiligne infini, spire circulaire exacte (intégrales
-  elliptiques complètes), solénoïde (somme de spires), dipôle magnétique.
+- Sources magnétiques : fil rectiligne infini, nappe de courant plane, spire circulaire
+  exacte (intégrales elliptiques complètes), solénoïde (somme de spires), aimant
+  cylindrique uniformément aimanté (`Aimant`, le solénoïde équivalent, dessiné en coupe
+  avec ses pôles N et S), dipôle magnétique.
+- Sources électriques : plan chargé infini (`PlanCharge`), le symétrique du fil chargé ;
+  et `ChampUniforme`, électrique (`E=(Ex, Ey)`) ou magnétique (`B=(Bx, By)`), qui
+  s'ajoute aux autres sources (charge ou fil dans un champ uniforme).
+- Constantes `K_COULOMB` = 1/(4π ε0) et `MU0_SUR_4PI` = μ0/(4π), pour passer des
+  unités réduites du paquet aux valeurs SI.
 - Fonction de flux (A_z pour des fils, fonction de Stokes pour des sources de
-  révolution), et lignes de champ comme ses lignes de niveau.
+  révolution), et lignes de champ comme ses lignes de niveau ; l'axe de révolution
+  peut être orienté par un champ uniforme ou un plan chargé.
 - Lignes du champ magnétique fermées : l'intégration s'arrête quand la ligne repasse
   à son point de départ.
 - Placement des lignes selon le flux : nombre proportionnel à la charge, et aucune
   ligne tracée deux fois ; départs à flux égal le long d'un segment.
 - Lignes nommées de façon stable, réglages par ligne (flèches, marge, sens, longueur
-  maximale, style).
-- Tests numériques : champs confrontés aux formules et à la loi de Biot et Savart,
-  propriétés des lignes. Exemples tirés des figures du cours.
+  maximale, style) ; `options(nom)` et `depart(nom)` lisent ce que `ajuste` change.
+- Sur la carte : `champ`, `potentiel` et `flux` en un point, `niveaux` de la fonction
+  de flux pour une carte magnétique, `enregistre` qui trace et écrit la figure.
+- Garde-fous : un segment de départ qui passe à moins du rayon d'arrêt d'une source est
+  refusé ; `fleches` accepte un seul nombre ; un style de tracé donné directement à
+  `ajuste` (`color=`) renvoie vers `style={...}`.
+- Tests numériques : champs confrontés aux formules, à la loi de Biot et Savart, à des
+  nappes de fils ; propriétés des lignes. Exemples tirés des figures du cours.
+- Licences : MIT pour le code, CC BY-NC-SA 4.0 pour les exemples. Intégration
+  continue (pytest sous Python 3.11 et 3.14, ruff, mypy, `uv build`) et publication
+  de la roue et du sdist à chaque release GitHub.
 
 ### Modifié
 
@@ -40,6 +52,13 @@ correspondance).
 - Le dipôle est orienté par l'angle de son moment depuis Ox (`angle`), et non plus
   depuis Oy dans le sens horaire (`alpha`) ; le fil chargé (`FilCharge`) prend sa
   charge linéique λ (l'ancien `Ligne(q)` valait λ = q/2).
+- Le seuil des niveaux symétriques (`niveaux(..., symetrique=True, seuil=...)`) est
+  relatif : une fraction de max(|vmin|, |vmax|), 10⁻³ par défaut. Un seuil absolu
+  empilait des niveaux sur la surface V = 0 dès que la grille passait près d'une
+  charge.
+- La tête de paquet n'expose que la carte, les sources, de quoi en écrire une
+  (`Source`, `Singularite`, `Noyau`, `Nature`) et les constantes ; le reste s'importe
+  de son module.
 
 ### Corrigé
 

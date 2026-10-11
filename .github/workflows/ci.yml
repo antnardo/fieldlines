@@ -1,0 +1,48 @@
+# À chaque push et pull request : la suite de tests sous les deux Python aux bornes
+# (3.11, celui de l'environnement pythontex ; 3.14, le courant), ruff et mypy, et la
+# construction de la roue et du sdist.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  tests:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - name: Tests sous Python ${{ matrix.python }}
+        run: uv run --python ${{ matrix.python }} pytest
+
+  qualite:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv run ruff check src tests examples
+      - run: uv run ruff format --check src tests examples
+      - run: uv run mypy
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - run: uv build
+      - run: uvx twine check dist/*

@@ -1,0 +1,36 @@
+# À la publication d'une release sur GitHub : vérifier que l'étiquette est la version
+# du paquet, construire la roue et le sdist avec uv et les joindre à la release. Pas
+# de PyPI : le paquet s'installe depuis GitHub (pip install git+…) ou par la roue de
+# la release.
+name: Publication
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  artefacts:
+    name: Roue et sdist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+      - name: L'étiquette est la version du paquet
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(uv run --no-project python -c "import re, pathlib; print(re.search(r'__version__ = \"([^\"]+)\"', pathlib.Path('src/fieldlines/__init__.py').read_text()).group(1))")
+          echo "étiquette $tag, paquet $version"
+          test "$tag" = "$version"
+      - name: Construire la roue et le sdist
+        run: uv build
+      - run: uvx twine check dist/*.whl dist/*.tar.gz
+      - name: Joindre les artefacts à la release
+        run: gh release upload "${{ github.event.release.tag_name }}" dist/*.whl dist/*.tar.gz --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
